@@ -20,8 +20,6 @@ import { ApolloServer } from "apollo-server-express";
 import { ApolloServerPluginLandingPageGraphQLPlayground,ApolloServerPluginDrainHttpServer,ApolloServerPluginLandingPageDisabled } from "apollo-server-core";
 
 const port = process.env.PORT || 4000;
-console.log(path.join(__dirname,'..','..','..'),'kjsadflkjdsaflkdsjaflkjdlkf')
-
 const app = express()
 const httpServer = http.createServer(app)
 
