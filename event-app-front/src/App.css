@@ -1,0 +1,16 @@
+#crud-modal::-webkit-scrollbar {
+  display: none;
+}
+
+#crud-modal {
+  -ms-overflow-style: none;  
+  scrollbar-width: none;  
+}
+
+.error-message {
+  font-size: 14px;
+  color : red;
+  font-weight: 600;
+  position: absolute;
+  bottom: -22px;
+}
