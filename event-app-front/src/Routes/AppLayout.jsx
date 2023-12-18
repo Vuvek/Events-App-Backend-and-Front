@@ -8,9 +8,7 @@ const AppLayout = () => {
     <>
       <AuthProvider>
         <Navigation />
-        <div className="md:h-screen">
           <Outlet />
-        </div>
         <Footer />
       </AuthProvider>
     </>

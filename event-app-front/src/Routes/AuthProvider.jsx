@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { getDataFromStorage } from "../utils/commonFunctions";
+import { BounceLoader } from "react-spinners";
 
 const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
@@ -11,7 +12,6 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     const user = getDataFromStorage("token");
     if (user) {
-      setLoading(false);
       if (
         location.pathname.startsWith("/signin") ||
         location.pathname.startsWith("/signup")
@@ -21,7 +21,6 @@ const AuthProvider = ({ children }) => {
         navigate(location.pathname);
       }
     } else {
-      setLoading(false);
       if (
         location.pathname.startsWith("/signin") ||
         location.pathname.startsWith("/signup")
@@ -31,10 +30,15 @@ const AuthProvider = ({ children }) => {
         navigate("/signin");
       }
     }
+    setLoading(false);
   }, []);
 
   if (loading) {
-    return <div className="spinner absolute top-[50%] left-[50%]"></div>;
+    return (
+      <div className="w-full h-screen flex items-start justify-center absolute top-[45%]">
+        <BounceLoader color="black" size={60} />
+      </div>
+    );
   }
   return <>{children}</>;
 };

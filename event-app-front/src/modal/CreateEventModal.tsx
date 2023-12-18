@@ -1,10 +1,12 @@
-import { Form, Formik } from "formik";
+import * as Yup from "yup";
+import { ErrorMessage, Form, Formik } from "formik";
 import ModalHeader from "./ModalHeader";
 import { createPortal } from "react-dom";
 import axios, { AxiosResponse } from "axios";
 import { useMutation } from "@apollo/client";
 import { BounceLoader } from "react-spinners";
 import { IEventData } from "../types/commonTypes";
+import { useToasts } from "react-toast-notifications";
 import { GET_ALL_Events } from "../gqloperations/queries";
 import { CREATE_EVENT } from "../gqloperations/mutations";
 import { eventInitialValues } from "../utils/fileConstant";
@@ -22,6 +24,7 @@ const EventModal: React.FC<IEventProps> = (props) => {
 
   // refs
   const userRef = useRef<string>("");
+  const { addToast } = useToasts();
 
   // useStates hook
   const [addGuest, setAddGuest] = useState<IAddGuests[] | []>([]);
@@ -41,22 +44,19 @@ const EventModal: React.FC<IEventProps> = (props) => {
   useEffect(() => {
     if (userRef) {
       userRef.current = getDataFromStorage("userId") ?? "";
-      userRef.current = JSON.parse(userRef.current)
+      userRef.current = JSON.parse(userRef.current);
     }
   }, []);
 
   // graphQl hooks
-  const [createEvent, { loading }] = useMutation(CREATE_EVENT, {
-    refetchQueries:[GET_ALL_Events],
-    variables: { eventBy:  userRef.current}
+  const [createEvent, { data, loading, error }] = useMutation(CREATE_EVENT, {
+    refetchQueries: [GET_ALL_Events],
+    variables: { eventBy: userRef.current },
+    onError(err) {
+      addToast(err.message, { appearance: "error" })
+    },
   });
 
-  if (loading)
-    return (
-      <div className="w-full h-screen flex items-start justify-center absolute top-[45%]">
-        <BounceLoader color="black" size={60} />
-      </div>
-    );
 
   const handleAddGuest = () => {
     if (addGuestInput) {
@@ -157,7 +157,9 @@ const EventModal: React.FC<IEventProps> = (props) => {
         event: formValues,
       },
     });
-    setShowModal(false);
+    if(!error) {
+      setShowModal(false);
+    }
   };
 
   const handleFileChange = async (
@@ -183,6 +185,30 @@ const EventModal: React.FC<IEventProps> = (props) => {
     }
   };
 
+  const validationSchema = Yup.object({
+    eventName: Yup.string()
+      .max(100, "Must be 15 characters or less")
+      .required("Event Name is Required"),
+    description: Yup.string()
+      .max(100, "Must be 15 characters or less")
+      .required("Description is Required"),
+    date: Yup.date().required("Date is Required"),
+    time: Yup.string().required("Time is Required"),
+    location: Yup.string()
+      .max(100, "Must be 15 characters or less")
+      .required("Location is Required"),
+    meetingRoom: Yup.string()
+      .max(100, "Must be 15 characters or less")
+      .required("Meeting Room is Required")
+  });
+
+  if (loading)
+    return (
+      <div className="w-full h-screen flex items-start justify-center absolute top-[45%]">
+        <BounceLoader color="black" size={60} />
+      </div>
+    );
+
   return (
     <>
       {createPortal(
@@ -201,6 +227,7 @@ const EventModal: React.FC<IEventProps> = (props) => {
 
               <Formik
                 initialValues={eventInitialValues}
+                validationSchema={validationSchema}
                 onSubmit={handleSubmit}
               >
                 {(formikProps) => {
@@ -217,7 +244,7 @@ const EventModal: React.FC<IEventProps> = (props) => {
                             >
                               Event Name
                             </label>
-                            <div className="relative">
+                            <div className="mb-1 relative">
                               <input
                                 value={values.eventName}
                                 onChange={handleChange}
@@ -227,7 +254,6 @@ const EventModal: React.FC<IEventProps> = (props) => {
                                 id="eventName"
                                 className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                                 placeholder="Enter event name"
-                                required
                               />
                               {!addDescription && (
                                 <button
@@ -238,6 +264,20 @@ const EventModal: React.FC<IEventProps> = (props) => {
                                   Add description
                                 </button>
                               )}
+                              <div className="absolute flex gap-2 flex-row md:flex-row">
+                                <ErrorMessage
+                                  name="eventName"
+                                  component="div"
+                                  className="text-xs text-red-700"
+                                />
+                                {!addDescription && (
+                                  <ErrorMessage
+                                    name="description"
+                                    component="div"
+                                    className="text-xs text-red-700"
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
                           {addDescription && (
@@ -248,7 +288,7 @@ const EventModal: React.FC<IEventProps> = (props) => {
                               >
                                 Description
                               </label>
-                              <div className="relative">
+                              <div className="relative mb-1">
                                 <input
                                   type="text"
                                   value={values.description}
@@ -258,7 +298,6 @@ const EventModal: React.FC<IEventProps> = (props) => {
                                   id="description"
                                   className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                                   placeholder="Enter event description"
-                                  required
                                 />
                                 <button
                                   onClick={() =>
@@ -267,12 +306,17 @@ const EventModal: React.FC<IEventProps> = (props) => {
                                   type="button"
                                   className="bg-white absolute right-1.5 top-1.5 hover:bg-gray-100 text-gray-800 border font-semibold rounded-lg text-xs px-6 py-1.5 text-center border-gray-400 shadow"
                                 >
-                                  Delete description
+                                  Delete 
                                 </button>
+                                <ErrorMessage
+                                  name="description"
+                                  component="div"
+                                  className="absolute text-xs text-red-800"
+                                />
                               </div>
                             </div>
                           )}
-                          <div className="col-span-3 sm:col-span-1">
+                          <div className="col-span-3 sm:col-span-1 mb-1 relative">
                             <label
                               htmlFor="date"
                               className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
@@ -287,10 +331,14 @@ const EventModal: React.FC<IEventProps> = (props) => {
                               name="date"
                               id="date"
                               className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                              required
+                            />
+                            <ErrorMessage
+                              name="date"
+                              component="div"
+                              className="absolute text-xs text-red-800"
                             />
                           </div>
-                          <div className="col-span-3 sm:col-span-1">
+                          <div className="col-span-3 sm:col-span-1 mb-1 relative">
                             <label
                               htmlFor="time"
                               className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
@@ -305,7 +353,11 @@ const EventModal: React.FC<IEventProps> = (props) => {
                               name="time"
                               id="time"
                               className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                              required
+                            />
+                            <ErrorMessage
+                              name="time"
+                              component="div"
+                              className="absolute text-xs text-red-800"
                             />
                           </div>
 
@@ -363,38 +415,52 @@ const EventModal: React.FC<IEventProps> = (props) => {
                               </div>
                             </div>
                           </div>
-
+                          
                           <div className="col-span-3">
                             <label
                               htmlFor="location"
-                              className="block mb-2 text-sm font-medium text-gray-900 dark:text-white pointer-events-none"
+                              className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                             >
                               Location
                             </label>
-                            <div className="relative">
+                            <div className="mb-1 relative">
                               <input
-                                type="text"
                                 value={values.location}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
+                                type="text"
                                 name="location"
                                 id="location"
                                 className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                placeholder="Choose Location"
-                                required
+                                placeholder="Enter event name"
                               />
                               {!addMeetingRoom && (
                                 <button
                                   onClick={() => handleAddMeetingRoom()}
+                                  type="button"
                                   className="bg-white absolute right-1.5 top-1.5 hover:bg-gray-100 text-gray-800 border font-semibold rounded-lg text-xs px-6 py-1.5 text-center border-gray-400 shadow"
                                 >
                                   Set meeting room
                                 </button>
                               )}
+                              <div className="absolute flex gap-2 flex-row md:flex-row">
+                                <ErrorMessage
+                                  name="location"
+                                  component="div"
+                                  className="text-xs text-red-700"
+                                />
+                                {!addMeetingRoom && (
+                                  <ErrorMessage
+                                    name="meetingRoom"
+                                    component="div"
+                                    className="text-xs text-red-700"
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
                           {addMeetingRoom && (
-                            <div className="col-span-3">
+                            <div className="col-span-3 mb-1 relative">
                               <label
                                 htmlFor="meetingRoom"
                                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
@@ -411,7 +477,6 @@ const EventModal: React.FC<IEventProps> = (props) => {
                                   id="meetingRoom"
                                   className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                                   placeholder="Enter meeting room"
-                                  required
                                 />
                                 <button
                                   onClick={() =>
@@ -420,9 +485,14 @@ const EventModal: React.FC<IEventProps> = (props) => {
                                   type="button"
                                   className="bg-white absolute right-1.5 top-1.5 hover:bg-gray-100 text-gray-800 border font-semibold rounded-lg text-xs px-6 py-1.5 text-center border-gray-400 shadow"
                                 >
-                                  Delete description
+                                  Delete
                                 </button>
                               </div>
+                              <ErrorMessage
+                                name="meetingRoom"
+                                component="div"
+                                className="absolute text-xs text-red-800"
+                              />
                             </div>
                           )}
                           <div className="col-span-3">
@@ -432,7 +502,7 @@ const EventModal: React.FC<IEventProps> = (props) => {
                             >
                               Add guests
                             </label>
-                            <div className="relative">
+                            <div className="relative mb-1">
                               <input
                                 type="email"
                                 name="email"

@@ -40,13 +40,13 @@ const Home = () => {
               </h2>
 
               <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
-                {eventsData.map((event) => (
-                  <EventCard key={event.by} event={event} />
+                {eventsData.map((event,index) => (
+                  <EventCard key={index} event={event} />
                 ))}
               </div>
             </div>
           ) : (
-            <div className="h-[90vh] flex justify-center items-center">
+            <div className="h-[75vh] flex justify-center items-center">
               <h2 className="text-2xl font-bold tracking-tight text-gray-900 text-center">
                 Please Add Your Events
               </h2>

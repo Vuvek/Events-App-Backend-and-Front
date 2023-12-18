@@ -8,7 +8,7 @@ import { ApolloClient, InMemoryCache, ApolloProvider } from "@apollo/client";
 import { getDataFromStorage } from "./utils/commonFunctions";
 
 const client = new ApolloClient({
-  uri: "/graphql",
+  uri: "http://localhost:4000/graphql",
   cache: new InMemoryCache(),
   headers: {
     authorization: getDataFromStorage("token") || "",
